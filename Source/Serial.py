@@ -1,4 +1,6 @@
 import _thread
+import threading
+
 import serial
 import time
 # import thread
@@ -13,8 +15,8 @@ class MSerialPort:
         self.port = serial.Serial(port, buand)
         if not self.port.isOpen():
             self.status = 1
-            pass
-            # self.port.open()
+            # pass
+            self.port.open()
 
     def port_open(self):
         if not self.port.isOpen():
@@ -38,8 +40,8 @@ class MSerialPort:
     def read_data(self):
         while True:
             data = self.port.readline()
-            print(data)
-            self.message += data
+            # print(data)
+            self.message = data
 
     def getData(self):
         return self.message
@@ -50,11 +52,12 @@ if __name__ == '__main__':
     mSerial = MSerialPort(SerialPort, 115200)
     mSerial.port_open()
     _thread.start_new_thread(mSerial.read_data, ())
+
     while True:
         time.sleep(1)
 
         if(mSerial.message):
-            pass
-            # print(mSerial.message)
+            # pass
+            print(mSerial.message)
             # mSerial.message=''
         # print("mSerial.message")

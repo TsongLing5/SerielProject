@@ -16,6 +16,8 @@ from tkinter import *
 from tkinter import messagebox, ttk
 from tkinter import ttk
 
+import ctypes
+
 import _thread
 import serial
 import time
@@ -32,7 +34,7 @@ global baudChosen
 global mBaud
 global humi,temp
 global mSerial
-global timer
+global td
 
 def init():
     global ser
@@ -43,14 +45,25 @@ def init():
     global mBaud
     global mSerial
     global tSerial
-    global timer
+    global td
 
     mBaud=115200
     # ser = serial.Serial(SerialPort, mBaud, timeout=0.5)  # 使用USB连接串行口
     mSerial = MSerialPort(SerialPort, mBaud)
-    tSerial = threading.Thread(target=mSerial.read_data, args=())
-    timer = threading.Timer(1, SerialTimer())
+
+    td = threading.Thread(target=mSerial.read_data)
+    td.setDaemon(True)
+    td.start()
+
+    timer = threading.Timer(5, SerialTimer)
     timer.start()
+    # thread_read = threading.Thread(target=mSerial.read_data)
+    # thread_read.setDaemon(True)
+    # thread_read.start()
+
+    # tSerial = threading.Thread(target=mSerial.read_data, args=())
+    # timer = threading.Timer(1, SerialTimer())
+    # timer.start()
 
     # ser.close()
     window = tkinter.Tk()
@@ -60,11 +73,13 @@ def init():
     window.geometry('200x200')
 
 
-    temp=Label(window,text='temperature')
+    temp=Label(window,text='温度：......')
     temp.pack()
-    humi=Label(window,text='humidity')
+    humi=Label(window,text='湿度：......')
     humi.configure(bg = "dark green")
     humi.pack()
+
+
     # center_window(window, 300, 240)
 
     # Listbox code
@@ -84,6 +99,7 @@ def init():
     # comboxList.bind("<<ComboboxSelected>>", callback)
     # comboxList.pack()
 
+#################Chose Baud component
     baudrate = tkinter.StringVar()
     baudChosen = ttk.Combobox(window, width=12, textvariable=baudrate,state='readonly')
     baudChosen['values'] = baud  # 设置下拉列表的值
@@ -93,14 +109,18 @@ def init():
     baudChosen.pack()
 
 
-
-    conbt = Button(window, text='连接',command=serialCrt)
+########## 连接断开按钮的button
+    # if(mSerial.status):
+    #     str='连接1'
+    # else:
+    #     str='断开1'
+    conbt = Button(window, text=str,command=serialCrt)
     changeSerialSts()
     conbt.pack()
     # disbt = Button(window, text='断开连接', command=disconnectSerial)
     # disbt.pack()
 
-    get = Button(window, text='get',command=read())  #NOP
+    get = Button(window, text='get',command=read)  #NOP
     get.pack()
 
     window.maxsize(1200, 600)
@@ -141,17 +161,24 @@ def changeSerialSts():
 
 def serialCrt():
     global mSerial
-    global tSerial
+    global td
+    # global tSerial
     if(mSerial.getPortStatus()):
-        # conbt.configure(text='断开')
         mSerial.port_close()
+        # _thread.exit()
         # tSerial._stop()
+        # td.stop()
         # _thread.exit_thread()
+
         print('close serial')
     else:
-        # conbt.configure(text='连接')
-        print('Baud:'+str(mBaud))
+        print('BBaud:'+str(mBaud))
         mSerial.port_open()
+
+        # _thread.start_new_thread(mSerial.read_data, ())
+
+
+        # mSerial.port_open()
 
         # tSerial.start()
         # _thread.start_new_thread(mSerial.read_data, ())
@@ -164,9 +191,24 @@ def disconnectSerial():
     changeSerialSts()
 
 def read():
-    # s=ser.read(14)
-    print("NOP")
+    global mSerial
+    if(mSerial.getPortStatus()):
+        # s=ser.read(14)
+        print(mSerial.message)
+    else:
+        print('Serial is closed!')
 
+def SerialTimer():
+    t=str(mSerial.message[0:4],encoding = "utf-8")
+    h=str(mSerial.message[7:11],encoding="utf-8")
+    temp.configure(text='湿度：'+t+' %rh')
+    humi.configure(text='温度：'+h+' ℃ ')
+    print('我是定时器')
+    print(mSerial.message)
+    timer = threading.Timer(5.5, SerialTimer)
+    timer.start()
+
+#######while exit the program,close serial
 def on_closing():
     if messagebox.askokcancel("Quit", "Do you want to quit?"):
         # pass
@@ -177,13 +219,13 @@ def on_closing():
             disconnectSerial()
             print("close successful!")
         window.destroy()
-def SerialTimer():
-    global timer
-    global mSerial
-    print(mSerial.getData())
-
-    timer = threading.Timer(5.5, SerialTimer)
-    timer.start()
+# def SerialTimer():
+#     global timer
+#     global mSerial
+#     print(mSerial.getData())
+#
+#     timer = threading.Timer(5.5, SerialTimer)
+#     timer.start()
 
 if __name__ == '__main__':
 # if __name__=='__main__':
@@ -195,11 +237,12 @@ if __name__ == '__main__':
     # t.join()
     # mSerial.open()
 
-    while(1):
-        # time.sleep(5)
-        print("print suuce")
 
-        print('huoq'+mSerial.getData())
+    # while(1):
+        # time.sleep(5)
+        # print("print suuce")
+        #
+        # print('huoq'+mSerial.getData())
     # while(1):
     #     pass
     #     time.sleep(500)
